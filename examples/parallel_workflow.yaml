@@ -1,0 +1,131 @@
+# Parallel workflow example demonstrating concurrent task execution
+name: "parallel_data_enrichment"
+description: "A workflow that processes data through multiple parallel paths"
+version: "1.0.0"
+parallel_execution: true
+failure_strategy: "partial_completion_allowed"
+global_timeout: 600
+
+agents:
+  - name: "web_scraper"
+    type: "http_api"
+    endpoint: "https://scraper.example.com"
+    timeout: 45
+    authentication:
+      type: "api_key"
+      key: "scraper-api-key"
+      header: "X-API-Key"
+    retry_config:
+      max_attempts: 4
+      initial_delay: 2.0
+      max_delay: 30.0
+      exponential_base: 2.0
+      jitter: true
+    circuit_breaker:
+      failure_threshold: 5
+      recovery_timeout: 90
+
+  - name: "sentiment_analyzer"
+    type: "ai_agent"
+    endpoint: "https://api.huggingface.co/models/sentiment-analysis"
+    timeout: 30
+    authentication:
+      type: "bearer"
+      token: "hf-token"
+    retry_config:
+      max_attempts: 3
+      initial_delay: 1.0
+      max_delay: 20.0
+
+  - name: "translation_service"
+    type: "ai_agent"
+    endpoint: "https://api.translate.example.com"
+    timeout: 25
+    authentication:
+      type: "api_key"
+      key: "translate-key"
+      header: "Authorization"
+    retry_config:
+      max_attempts: 2
+      initial_delay: 1.5
+
+  - name: "database_writer"
+    type: "mcp_server"
+    endpoint: "http://localhost:9000/mcp"
+    timeout: 20
+    retry_config:
+      max_attempts: 5
+      initial_delay: 0.5
+      max_delay: 10.0
+    circuit_breaker:
+      failure_threshold: 3
+      recovery_timeout: 60
+
+tasks:
+  - name: "scrape_news_articles"
+    description: "Scrape news articles from various sources"
+    agent_name: "web_scraper"
+    action: "scrape_articles"
+    parameters:
+      sources: ["bbc.com", "cnn.com", "reuters.com"]
+      max_articles: 50
+      date_range: "last_24_hours"
+    timeout: 60
+    retry_config:
+      max_attempts: 3
+      initial_delay: 2.0
+    depends_on: []
+    continue_on_failure: false
+
+  # These tasks run in parallel after scraping is complete
+  - name: "analyze_sentiment"
+    description: "Analyze sentiment of scraped articles"
+    agent_name: "sentiment_analyzer"
+    action: "batch_sentiment"
+    parameters:
+      texts: "{{scrape_news_articles.result.articles}}"
+      model: "roberta-base-sentiment"
+      batch_size: 10
+    timeout: 45
+    depends_on: ["scrape_news_articles"]
+    continue_on_failure: true
+
+  - name: "translate_articles"
+    description: "Translate articles to multiple languages"
+    agent_name: "translation_service"
+    action: "batch_translate"
+    parameters:
+      texts: "{{scrape_news_articles.result.articles}}"
+      target_languages: ["es", "fr", "de", "zh"]
+      source_language: "en"
+    timeout: 60
+    depends_on: ["scrape_news_articles"]
+    continue_on_failure: true
+
+  - name: "extract_entities"
+    description: "Extract named entities from articles"
+    agent_name: "sentiment_analyzer"  # Reusing AI agent for NER
+    action: "extract_entities"
+    parameters:
+      texts: "{{scrape_news_articles.result.articles}}"
+      entity_types: ["PERSON", "ORG", "GPE", "EVENT"]
+    timeout: 40
+    depends_on: ["scrape_news_articles"]
+    continue_on_failure: true
+
+  # Final consolidation task
+  - name: "store_enriched_data"
+    description: "Store all enriched data in database"
+    agent_name: "database_writer"
+    action: "bulk_insert"
+    parameters:
+      table: "enriched_articles"
+      data:
+        original_articles: "{{scrape_news_articles.result}}"
+        sentiment_scores: "{{analyze_sentiment.result}}"
+        translations: "{{translate_articles.result}}"
+        entities: "{{extract_entities.result}}"
+      conflict_resolution: "upsert"
+    timeout: 30
+    depends_on: ["analyze_sentiment", "translate_articles", "extract_entities"]
+    continue_on_failure: false

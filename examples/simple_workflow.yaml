@@ -1,0 +1,121 @@
+# Simple workflow example demonstrating basic agent communication
+name: "simple_data_processing"
+description: "A simple workflow that processes data through multiple agents"
+version: "1.0.0"
+parallel_execution: false
+failure_strategy: "stop_on_first_failure"
+global_timeout: 300
+
+# Define agents that will be used in tasks
+agents:
+  - name: "data_fetcher"
+    type: "http_api"
+    endpoint: "https://api.example.com"
+    timeout: 30
+    authentication:
+      type: "bearer"
+      token: "your-api-token-here"
+    retry_config:
+      max_attempts: 3
+      initial_delay: 1.0
+      max_delay: 10.0
+      exponential_base: 2.0
+      jitter: true
+    circuit_breaker:
+      failure_threshold: 5
+      recovery_timeout: 60
+    custom_params:
+      user_agent: "LeadAgent/1.0"
+
+  - name: "ai_processor"
+    type: "ai_agent"
+    endpoint: "https://api.openai.com/v1/chat/completions"
+    timeout: 60
+    authentication:
+      type: "bearer"
+      token: "your-openai-api-key"
+    retry_config:
+      max_attempts: 2
+      initial_delay: 2.0
+      max_delay: 30.0
+    circuit_breaker:
+      failure_threshold: 3
+      recovery_timeout: 120
+
+  - name: "mcp_analyzer"
+    type: "mcp_server"
+    endpoint: "http://localhost:8080/mcp"
+    timeout: 45
+    retry_config:
+      max_attempts: 3
+      initial_delay: 1.5
+      max_delay: 15.0
+
+# Define tasks in the workflow
+tasks:
+  - name: "fetch_raw_data"
+    description: "Fetch raw data from external API"
+    agent_name: "data_fetcher"
+    action: "/data/fetch"
+    parameters:
+      method: "GET"
+      endpoint: "/api/v1/data"
+      params:
+        limit: 100
+        format: "json"
+    timeout: 30
+    retry_config:
+      max_attempts: 3
+      initial_delay: 1.0
+    depends_on: []
+    continue_on_failure: false
+
+  - name: "process_with_ai"
+    description: "Process fetched data using AI"
+    agent_name: "ai_processor"
+    action: "analyze"
+    parameters:
+      model: "gpt-4"
+      messages:
+        - role: "system"
+          content: "You are a data analyst. Analyze the provided data and extract insights."
+        - role: "user"
+          content: "{{fetch_raw_data.result}}"  # Reference to previous task result
+      max_tokens: 1000
+      temperature: 0.3
+    timeout: 60
+    retry_config:
+      max_attempts: 2
+      initial_delay: 2.0
+    depends_on: ["fetch_raw_data"]
+    continue_on_failure: false
+
+  - name: "analyze_with_mcp"
+    description: "Perform additional analysis using MCP server"
+    agent_name: "mcp_analyzer"
+    action: "statistical_analysis"
+    parameters:
+      data_source: "{{fetch_raw_data.result}}"
+      analysis_type: "correlation"
+      confidence_level: 0.95
+    timeout: 45
+    retry_config:
+      max_attempts: 3
+      initial_delay: 1.5
+    depends_on: ["fetch_raw_data"]
+    continue_on_failure: true  # Allow workflow to continue even if this fails
+
+  - name: "generate_report"
+    description: "Generate final report combining all analyses"
+    agent_name: "ai_processor"
+    action: "generate_report"
+    parameters:
+      template: "comprehensive_analysis"
+      data:
+        ai_insights: "{{process_with_ai.result}}"
+        statistical_analysis: "{{analyze_with_mcp.result}}"
+        raw_data_summary: "{{fetch_raw_data.result}}"
+      format: "markdown"
+    timeout: 30
+    depends_on: ["process_with_ai", "analyze_with_mcp"]
+    continue_on_failure: false
