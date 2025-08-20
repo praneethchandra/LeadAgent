@@ -155,21 +155,206 @@ LeadAgent/
 
 ## 🚀 Quick Start
 
+### Prerequisites
+
+- Python 3.9 or higher
+- Poetry (recommended) or pip
+- Git
+
 ### Installation
+
+#### Option 1: Using Poetry (Recommended)
 
 ```bash
 # Clone the repository
 git clone https://github.com/your-repo/lead-agent.git
 cd lead-agent
 
-# Install with Poetry
+# Install Poetry if you haven't already
+curl -sSL https://install.python-poetry.org | python3 -
+
+# Install dependencies
 poetry install
 
-# Or install with pip
-pip install -e .
+# Activate the virtual environment
+poetry shell
 ```
 
-### Basic Usage
+#### Option 2: Using pip
+
+```bash
+# Clone the repository
+git clone https://github.com/your-repo/lead-agent.git
+cd lead-agent
+
+# Create virtual environment (recommended)
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install in development mode
+pip install -e .
+
+# Or install dependencies directly
+pip install -r requirements.txt
+```
+
+#### Option 3: Install from PyPI (when available)
+
+```bash
+pip install lead-agent
+```
+
+### Verify Installation
+
+```bash
+# Check if the package is installed correctly
+python -c "from lead_agent import LeadAgent; print('Lead Agent installed successfully!')"
+
+# Run tests to ensure everything works
+pytest tests/ -v
+```
+
+## 🏃‍♂️ How to Run the Application
+
+The Lead Agent system can be run in multiple ways depending on your use case:
+
+### 1. Command Line Interface (CLI)
+
+The simplest way to run workflows is using the CLI:
+
+```bash
+# Run a workflow from a YAML configuration file
+python -m lead_agent.lead_agent examples/simple_workflow.yaml
+
+# Or if installed via pip/poetry
+python -c "
+import asyncio
+from lead_agent.lead_agent import main
+asyncio.run(main())
+" examples/simple_workflow.yaml
+```
+
+**Example CLI Output:**
+```
+Workflow completed with status: completed
+Completed tasks: 4/4
+Execution time: 12.34s
+
+Results:
+  fetch_raw_data: {'data': [...], 'count': 100}
+  process_with_ai: {'insights': 'Key findings...', 'confidence': 0.95}
+  analyze_with_mcp: {'correlation': 0.87, 'p_value': 0.02}
+  generate_report: {'report': 'markdown content...'}
+```
+
+### 2. Programmatic Usage (Python Script)
+
+For integration into your applications:
+
+```python
+import asyncio
+from lead_agent import LeadAgent
+
+async def run_workflow():
+    # Initialize the Lead Agent
+    agent = LeadAgent()
+    
+    # Option A: Run from YAML file
+    result = await agent.execute_workflow_from_file("examples/simple_workflow.yaml")
+    
+    # Option B: Run from dictionary configuration
+    config = {
+        "name": "my_workflow",
+        "agents": [...],
+        "tasks": [...]
+    }
+    result = await agent.execute_workflow_from_dict(config)
+    
+    # Process results
+    if result.status == "completed":
+        print(f"✅ Workflow completed successfully!")
+        print(f"📊 Results: {result.results}")
+    else:
+        print(f"❌ Workflow failed: {result.errors}")
+    
+    return result
+
+# Run the workflow
+if __name__ == "__main__":
+    result = asyncio.run(run_workflow())
+```
+
+### 3. REST API Server
+
+Start the REST API server for HTTP-based workflow management:
+
+```bash
+# Start the API server (default port 8000)
+python -m lead_agent.api.server
+
+# Or specify a custom port
+python -m lead_agent.api.server --port 8080 --host 0.0.0.0
+
+# With custom configuration
+python -m lead_agent.api.server --config config.yaml --debug
+```
+
+**API Server Features:**
+- 🔄 Submit and execute workflows via REST API
+- 📊 Real-time workflow status monitoring
+- 📋 List and manage workflow executions
+- 🔍 Query execution results and logs
+- 🛡️ Authentication and rate limiting support
+
+### 4. Interactive Demo
+
+Run the interactive demo to explore features:
+
+```bash
+# Run the comprehensive demo
+python examples/demo.py
+
+# Run the simple demo
+python examples/simple_demo.py
+```
+
+### 5. Docker Deployment
+
+Deploy using Docker for production environments:
+
+```bash
+# Build the Docker image
+docker build -t lead-agent .
+
+# Run with default configuration
+docker run -p 8000:8000 lead-agent
+
+# Run with custom configuration
+docker run -p 8000:8000 -v $(pwd)/config:/app/config lead-agent --config /app/config/production.yaml
+```
+
+### 6. Development Mode
+
+For development and testing:
+
+```bash
+# Install development dependencies
+poetry install --with dev
+
+# Run with hot reload (if using API server)
+python -m lead_agent.api.server --reload --debug
+
+# Run tests
+pytest tests/ -v --cov=src/lead_agent
+
+# Run linting and formatting
+black src/ tests/
+isort src/ tests/
+flake8 src/ tests/
+mypy src/
+```
+
+### Basic Usage Example
 
 1. **Create a workflow configuration** (`my_workflow.yaml`):
 
@@ -299,6 +484,227 @@ tasks:
       max_attempts: 2
       initial_delay: 0.5
 ```
+
+## 🌐 REST API Reference
+
+The Lead Agent system includes a comprehensive REST API for workflow management and monitoring.
+
+### API Server Setup
+
+```bash
+# Quick start (development mode with auto-reload)
+python run_api_server.py
+
+# Or start manually with custom options
+python -m lead_agent.api.server
+
+# Custom configuration
+python -m lead_agent.api.server --host 0.0.0.0 --port 8080 --debug
+
+# Production deployment
+python -m lead_agent.api.server --host 0.0.0.0 --port 8000 --workers 4
+```
+
+### Base URL
+```
+http://localhost:8000
+```
+
+### Authentication
+Currently, the API does not require authentication. In production, implement proper authentication mechanisms.
+
+### API Endpoints
+
+#### Health & Status
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/v1/health` | Health check and service information |
+| `GET` | `/` | API information and available endpoints |
+
+#### Workflow Management
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/workflows` | Create and execute a new workflow |
+| `GET` | `/api/v1/workflows` | List all workflow executions (paginated) |
+| `GET` | `/api/v1/workflows/{id}` | Get specific workflow details |
+| `GET` | `/api/v1/workflows/{id}/status` | Get workflow status and progress |
+| `DELETE` | `/api/v1/workflows/{id}` | Cancel a running workflow |
+
+#### Agent Testing
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/agents/test` | Test agent connectivity and configuration |
+
+### API Usage Examples
+
+#### 1. Create and Execute Workflow
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/workflows" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "simple_test_workflow",
+    "description": "A simple test workflow",
+    "version": "1.0.0",
+    "parallel_execution": false,
+    "failure_strategy": "stop_on_first_failure",
+    "agents": [
+      {
+        "name": "test_agent",
+        "type": "http_api",
+        "endpoint": "https://jsonplaceholder.typicode.com",
+        "timeout": 30
+      }
+    ],
+    "tasks": [
+      {
+        "name": "fetch_data",
+        "agent_name": "test_agent",
+        "action": "fetch",
+        "parameters": {
+          "method": "GET",
+          "endpoint": "/posts/1"
+        }
+      }
+    ]
+  }'
+```
+
+**Response:**
+```json
+{
+  "execution_id": "123e4567-e89b-12d3-a456-426614174000",
+  "name": "simple_test_workflow",
+  "status": "queued",
+  "created_at": "2024-01-15T10:30:00Z",
+  "total_tasks": 1
+}
+```
+
+#### 2. Check Workflow Status
+
+```bash
+curl "http://localhost:8000/api/v1/workflows/123e4567-e89b-12d3-a456-426614174000/status"
+```
+
+**Response:**
+```json
+{
+  "execution_id": "123e4567-e89b-12d3-a456-426614174000",
+  "status": "running",
+  "progress": 50.0,
+  "current_task": "fetch_data",
+  "message": "Workflow running"
+}
+```
+
+#### 3. List All Workflows
+
+```bash
+curl "http://localhost:8000/api/v1/workflows?page=1&page_size=10&status=completed"
+```
+
+**Response:**
+```json
+{
+  "workflows": [
+    {
+      "execution_id": "123e4567-e89b-12d3-a456-426614174000",
+      "name": "simple_test_workflow",
+      "status": "completed",
+      "created_at": "2024-01-15T10:30:00Z",
+      "completed_at": "2024-01-15T10:31:30Z",
+      "execution_time": 90.5,
+      "total_tasks": 1,
+      "completed_tasks": 1,
+      "results": {
+        "fetch_data": {"id": 1, "title": "Test Post", "body": "..."}
+      }
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "page_size": 10
+}
+```
+
+#### 4. Test Agent Configuration
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/agents/test" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agent_config": {
+      "name": "test_agent",
+      "type": "http_api",
+      "endpoint": "https://jsonplaceholder.typicode.com",
+      "timeout": 30
+    },
+    "test_action": "ping",
+    "test_parameters": {
+      "method": "GET",
+      "endpoint": "/posts/1"
+    }
+  }'
+```
+
+**Response:**
+```json
+{
+  "agent_name": "test_agent",
+  "success": true,
+  "response_time": 0.234,
+  "result": {"id": 1, "title": "Test Post", "body": "..."},
+  "error": null
+}
+```
+
+### Status Codes
+
+| Code | Description |
+|------|-------------|
+| `200` | Success |
+| `400` | Bad Request - Invalid input |
+| `404` | Not Found - Resource doesn't exist |
+| `422` | Unprocessable Entity - Validation error |
+| `500` | Internal Server Error |
+
+### Workflow Status Values
+
+| Status | Description |
+|--------|-------------|
+| `queued` | Workflow is queued for execution |
+| `running` | Workflow is currently executing |
+| `completed` | Workflow completed successfully |
+| `failed` | Workflow failed with errors |
+| `cancelled` | Workflow was cancelled by user |
+
+### Postman Collection
+
+Import the provided Postman collection (`Lead_Agent_API.postman_collection.json`) to test all API endpoints:
+
+1. **Open Postman**
+2. **Click Import** → **Upload Files**
+3. **Select** `Lead_Agent_API.postman_collection.json`
+4. **Configure** the `baseUrl` variable (default: `http://localhost:8000`)
+5. **Run** the requests to test different workflows
+
+**Collection Features:**
+- ✅ Pre-configured requests for all endpoints
+- 🔄 Automatic variable management (execution IDs)
+- 📝 Comprehensive test examples
+- 🧪 Agent connectivity testing
+- 📊 Error handling demonstrations
+
+### Interactive API Documentation
+
+Once the server is running, access interactive documentation:
+
+- **Swagger UI**: `http://localhost:8000/docs`
+- **ReDoc**: `http://localhost:8000/redoc`
 
 ## 🔧 Advanced Features
 

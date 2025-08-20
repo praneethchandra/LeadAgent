@@ -1,0 +1,456 @@
+{
+  "info": {
+    "name": "Lead Agent API",
+    "description": "Comprehensive API collection for Lead Agent workflow orchestration system",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000",
+      "type": "string",
+      "description": "Base URL for the Lead Agent API"
+    },
+    {
+      "key": "execution_id",
+      "value": "",
+      "type": "string",
+      "description": "Workflow execution ID (will be set automatically)"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health & Status",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "health"]
+            },
+            "description": "Check API health and get service information"
+          },
+          "response": []
+        },
+        {
+          "name": "API Info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": ["{{baseUrl}}"],
+              "path": [""]
+            },
+            "description": "Get API information and available endpoints"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Workflow Management",
+      "item": [
+        {
+          "name": "Create Simple Workflow",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('execution_id', response.execution_id);",
+                  "    pm.test('Workflow created successfully', () => {",
+                  "        pm.expect(response.status).to.eql('queued');",
+                  "        pm.expect(response.execution_id).to.not.be.empty;",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"simple_test_workflow\",\n  \"description\": \"A simple test workflow for API demonstration\",\n  \"version\": \"1.0.0\",\n  \"parallel_execution\": false,\n  \"failure_strategy\": \"stop_on_first_failure\",\n  \"global_timeout\": 300,\n  \"agents\": [\n    {\n      \"name\": \"test_http_agent\",\n      \"type\": \"http_api\",\n      \"endpoint\": \"https://jsonplaceholder.typicode.com\",\n      \"timeout\": 30,\n      \"retry_config\": {\n        \"max_attempts\": 3,\n        \"initial_delay\": 1.0,\n        \"max_delay\": 10.0\n      }\n    }\n  ],\n  \"tasks\": [\n    {\n      \"name\": \"fetch_posts\",\n      \"description\": \"Fetch sample posts from JSONPlaceholder\",\n      \"agent_name\": \"test_http_agent\",\n      \"action\": \"fetch\",\n      \"parameters\": {\n        \"method\": \"GET\",\n        \"endpoint\": \"/posts\",\n        \"params\": {\n          \"_limit\": 5\n        }\n      },\n      \"timeout\": 30,\n      \"depends_on\": [],\n      \"continue_on_failure\": false\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workflows",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "workflows"]
+            },
+            "description": "Create and execute a simple workflow with HTTP API agent"
+          },
+          "response": []
+        },
+        {
+          "name": "Create AI Workflow",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('execution_id', response.execution_id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"ai_analysis_workflow\",\n  \"description\": \"Workflow demonstrating AI agent integration\",\n  \"version\": \"1.0.0\",\n  \"parallel_execution\": false,\n  \"failure_strategy\": \"continue_on_failure\",\n  \"agents\": [\n    {\n      \"name\": \"openai_agent\",\n      \"type\": \"ai_agent\",\n      \"endpoint\": \"https://api.openai.com/v1/chat/completions\",\n      \"timeout\": 60,\n      \"authentication\": {\n        \"type\": \"bearer\",\n        \"token\": \"your-openai-api-key-here\"\n      },\n      \"retry_config\": {\n        \"max_attempts\": 3,\n        \"initial_delay\": 2.0\n      }\n    }\n  ],\n  \"tasks\": [\n    {\n      \"name\": \"generate_content\",\n      \"description\": \"Generate creative content using AI\",\n      \"agent_name\": \"openai_agent\",\n      \"action\": \"chat_completion\",\n      \"parameters\": {\n        \"model\": \"gpt-3.5-turbo\",\n        \"messages\": [\n          {\n            \"role\": \"user\",\n            \"content\": \"Write a short story about artificial intelligence\"\n          }\n        ],\n        \"max_tokens\": 500,\n        \"temperature\": 0.7\n      },\n      \"timeout\": 60\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workflows",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "workflows"]
+            },
+            "description": "Create workflow with AI agent (requires valid OpenAI API key)"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Parallel Workflow",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('execution_id', response.execution_id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"parallel_data_processing\",\n  \"description\": \"Demonstrates parallel task execution\",\n  \"version\": \"1.0.0\",\n  \"parallel_execution\": true,\n  \"failure_strategy\": \"partial_completion_allowed\",\n  \"agents\": [\n    {\n      \"name\": \"api_1\",\n      \"type\": \"http_api\",\n      \"endpoint\": \"https://jsonplaceholder.typicode.com\",\n      \"timeout\": 30\n    },\n    {\n      \"name\": \"api_2\",\n      \"type\": \"http_api\",\n      \"endpoint\": \"https://httpbin.org\",\n      \"timeout\": 30\n    }\n  ],\n  \"tasks\": [\n    {\n      \"name\": \"fetch_posts\",\n      \"agent_name\": \"api_1\",\n      \"action\": \"fetch\",\n      \"parameters\": {\n        \"method\": \"GET\",\n        \"endpoint\": \"/posts\",\n        \"params\": {\"_limit\": 3}\n      }\n    },\n    {\n      \"name\": \"fetch_ip_info\",\n      \"agent_name\": \"api_2\",\n      \"action\": \"fetch\",\n      \"parameters\": {\n        \"method\": \"GET\",\n        \"endpoint\": \"/ip\"\n      }\n    },\n    {\n      \"name\": \"combine_results\",\n      \"agent_name\": \"api_1\",\n      \"action\": \"combine\",\n      \"parameters\": {\n        \"method\": \"POST\",\n        \"endpoint\": \"/posts\",\n        \"data\": {\n          \"title\": \"Combined Data\",\n          \"body\": \"Results from parallel execution\"\n        }\n      },\n      \"depends_on\": [\"fetch_posts\", \"fetch_ip_info\"]\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workflows",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "workflows"]
+            },
+            "description": "Create workflow with parallel task execution"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Workflow Monitoring",
+      "item": [
+        {
+          "name": "List All Workflows",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workflows?page=1&page_size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "workflows"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number"
+                },
+                {
+                  "key": "page_size",
+                  "value": "10",
+                  "description": "Items per page"
+                }
+              ]
+            },
+            "description": "Get paginated list of all workflow executions"
+          },
+          "response": []
+        },
+        {
+          "name": "List Workflows by Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workflows?status=completed&page=1&page_size=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "workflows"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "completed",
+                  "description": "Filter by status (queued, running, completed, failed, cancelled)"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "page_size",
+                  "value": "5"
+                }
+              ]
+            },
+            "description": "Get workflows filtered by status"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Workflow Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workflows/{{execution_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "workflows", "{{execution_id}}"]
+            },
+            "description": "Get detailed information about a specific workflow execution"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Workflow Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workflows/{{execution_id}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "workflows", "{{execution_id}}", "status"]
+            },
+            "description": "Get current status and progress of a workflow execution"
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Workflow",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workflows/{{execution_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "workflows", "{{execution_id}}"]
+            },
+            "description": "Cancel a running workflow execution"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Agent Testing",
+      "item": [
+        {
+          "name": "Test HTTP Agent",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"agent_config\": {\n    \"name\": \"test_http_agent\",\n    \"type\": \"http_api\",\n    \"endpoint\": \"https://jsonplaceholder.typicode.com\",\n    \"timeout\": 30\n  },\n  \"test_action\": \"ping\",\n  \"test_parameters\": {\n    \"method\": \"GET\",\n    \"endpoint\": \"/posts/1\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/agents/test",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "agents", "test"]
+            },
+            "description": "Test HTTP agent connectivity and configuration"
+          },
+          "response": []
+        },
+        {
+          "name": "Test AI Agent",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"agent_config\": {\n    \"name\": \"test_ai_agent\",\n    \"type\": \"ai_agent\",\n    \"endpoint\": \"https://api.openai.com/v1/chat/completions\",\n    \"timeout\": 60,\n    \"authentication\": {\n      \"type\": \"bearer\",\n      \"token\": \"your-openai-api-key-here\"\n    }\n  },\n  \"test_action\": \"ping\",\n  \"test_parameters\": {\n    \"model\": \"gpt-3.5-turbo\",\n    \"messages\": [\n      {\n        \"role\": \"user\",\n        \"content\": \"Say hello\"\n      }\n    ],\n    \"max_tokens\": 10\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/agents/test",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "agents", "test"]
+            },
+            "description": "Test AI agent connectivity (requires valid API key)"
+          },
+          "response": []
+        },
+        {
+          "name": "Test MCP Agent",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"agent_config\": {\n    \"name\": \"test_mcp_agent\",\n    \"type\": \"mcp_server\",\n    \"endpoint\": \"http://localhost:8080/mcp\",\n    \"timeout\": 30\n  },\n  \"test_action\": \"ping\",\n  \"test_parameters\": {\n    \"test\": true\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/agents/test",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "agents", "test"]
+            },
+            "description": "Test MCP server agent connectivity"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Example Workflows",
+      "item": [
+        {
+          "name": "Data Processing Pipeline",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('execution_id', response.execution_id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"data_processing_pipeline\",\n  \"description\": \"Complete data processing pipeline with multiple agents\",\n  \"version\": \"1.0.0\",\n  \"parallel_execution\": false,\n  \"failure_strategy\": \"stop_on_first_failure\",\n  \"global_timeout\": 600,\n  \"agents\": [\n    {\n      \"name\": \"data_fetcher\",\n      \"type\": \"http_api\",\n      \"endpoint\": \"https://jsonplaceholder.typicode.com\",\n      \"timeout\": 30,\n      \"retry_config\": {\n        \"max_attempts\": 3,\n        \"initial_delay\": 1.0\n      }\n    },\n    {\n      \"name\": \"validator_service\",\n      \"type\": \"http_api\",\n      \"endpoint\": \"https://httpbin.org\",\n      \"timeout\": 20\n    }\n  ],\n  \"tasks\": [\n    {\n      \"name\": \"fetch_user_data\",\n      \"description\": \"Fetch user data from external API\",\n      \"agent_name\": \"data_fetcher\",\n      \"action\": \"fetch_users\",\n      \"parameters\": {\n        \"method\": \"GET\",\n        \"endpoint\": \"/users\",\n        \"params\": {\n          \"_limit\": 5\n        }\n      },\n      \"timeout\": 30,\n      \"depends_on\": [],\n      \"continue_on_failure\": false\n    },\n    {\n      \"name\": \"validate_data\",\n      \"description\": \"Validate fetched data\",\n      \"agent_name\": \"validator_service\",\n      \"action\": \"validate\",\n      \"parameters\": {\n        \"method\": \"POST\",\n        \"endpoint\": \"/post\",\n        \"data\": {\n          \"validation_type\": \"user_data\",\n          \"source\": \"jsonplaceholder\"\n        }\n      },\n      \"timeout\": 20,\n      \"depends_on\": [\"fetch_user_data\"],\n      \"continue_on_failure\": false\n    },\n    {\n      \"name\": \"process_results\",\n      \"description\": \"Process and format final results\",\n      \"agent_name\": \"data_fetcher\",\n      \"action\": \"process\",\n      \"parameters\": {\n        \"method\": \"POST\",\n        \"endpoint\": \"/posts\",\n        \"data\": {\n          \"title\": \"Processing Complete\",\n          \"body\": \"Data processing pipeline executed successfully\",\n          \"userId\": 1\n        }\n      },\n      \"timeout\": 15,\n      \"depends_on\": [\"validate_data\"],\n      \"continue_on_failure\": false\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workflows",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "workflows"]
+            },
+            "description": "Complex data processing pipeline with sequential tasks"
+          },
+          "response": []
+        },
+        {
+          "name": "Error Handling Demo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('execution_id', response.execution_id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"error_handling_demo\",\n  \"description\": \"Demonstrates error handling and retry mechanisms\",\n  \"version\": \"1.0.0\",\n  \"parallel_execution\": false,\n  \"failure_strategy\": \"continue_on_failure\",\n  \"agents\": [\n    {\n      \"name\": \"reliable_service\",\n      \"type\": \"http_api\",\n      \"endpoint\": \"https://jsonplaceholder.typicode.com\",\n      \"timeout\": 30\n    },\n    {\n      \"name\": \"unreliable_service\",\n      \"type\": \"http_api\",\n      \"endpoint\": \"https://httpstat.us\",\n      \"timeout\": 10,\n      \"retry_config\": {\n        \"max_attempts\": 3,\n        \"initial_delay\": 1.0,\n        \"max_delay\": 5.0\n      },\n      \"circuit_breaker\": {\n        \"failure_threshold\": 2,\n        \"recovery_timeout\": 30\n      }\n    }\n  ],\n  \"tasks\": [\n    {\n      \"name\": \"successful_task\",\n      \"agent_name\": \"reliable_service\",\n      \"action\": \"fetch\",\n      \"parameters\": {\n        \"method\": \"GET\",\n        \"endpoint\": \"/posts/1\"\n      },\n      \"continue_on_failure\": false\n    },\n    {\n      \"name\": \"failing_task\",\n      \"agent_name\": \"unreliable_service\",\n      \"action\": \"fail\",\n      \"parameters\": {\n        \"method\": \"GET\",\n        \"endpoint\": \"/500\"\n      },\n      \"continue_on_failure\": true\n    },\n    {\n      \"name\": \"recovery_task\",\n      \"agent_name\": \"reliable_service\",\n      \"action\": \"recover\",\n      \"parameters\": {\n        \"method\": \"GET\",\n        \"endpoint\": \"/posts/2\"\n      },\n      \"depends_on\": [\"failing_task\"],\n      \"continue_on_failure\": false\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workflows",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "workflows"]
+            },
+            "description": "Workflow demonstrating error handling, retries, and circuit breaker patterns"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Set timestamp for requests",
+          "pm.globals.set('timestamp', new Date().toISOString());"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global test to check response time",
+          "pm.test('Response time is reasonable', () => {",
+          "    pm.expect(pm.response.responseTime).to.be.below(30000);",
+          "});",
+          "",
+          "// Global test to check for valid JSON response",
+          "pm.test('Response is valid JSON', () => {",
+          "    pm.response.to.have.jsonBody();",
+          "});"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+# Lead Agent - Core dependencies
+# Generated from pyproject.toml for pip compatibility
+
+# Core dependencies
+pydantic>=2.5.0,<3.0.0
+pyyaml>=6.0.1,<7.0.0
+asyncio>=3.4.3,<4.0.0
+aiohttp>=3.9.0,<4.0.0
+tenacity>=8.2.3,<9.0.0
+structlog>=23.2.0,<24.0.0
+typing-extensions>=4.8.0,<5.0.0
+
+# API Server dependencies
+fastapi>=0.104.0,<1.0.0
+uvicorn>=0.24.0,<1.0.0
+
+# Development dependencies (optional)
+# Uncomment for development setup
+# pytest>=7.4.3,<8.0.0
+# pytest-asyncio>=0.21.1,<1.0.0
+# pytest-cov>=4.1.0,<5.0.0
+# pytest-mock>=3.12.0,<4.0.0
+# black>=23.11.0,<24.0.0
+# isort>=5.12.0,<6.0.0
+# flake8>=6.1.0,<7.0.0
+# mypy>=1.7.0,<2.0.0
